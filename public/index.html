@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Generation with Hugging Face Models</title>
+    <style>
+        /* Basic styles for the layout */
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+        .row { display: flex; justify-content: space-between; }
+        .col { width: 48%; }
+        #progress { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Generation with Hugging Face Models</h1>
+        <label for="modelSelect">Select Model:</label>
+        <select id="modelSelect">
+            <option value="https://api-inference.huggingface.co/models/inbarm/trained-flux-lora-maya-1100_rank32_lr1">Model 1: Maya</option>
+            <option value="https://api-inference.huggingface.co/models/Falah/eyad_radi">Model 2: Eyad Radi</option>
+        </select>
+
+        <div class="row">
+            <div class="col">
+                <label for="description">Enter a description for the image:</label>
+                <input type="text" id="description" value="albert einstein">
+                <label for="width">Width of the image (px):</label>
+                <input type="number" id="width" min="256" max="2048" value="1024" step="8">
+                <label for="height">Height of the image (px):</label>
+                <input type="number" id="height" min="256" max="2048" value="1024" step="8">
+            </div>
+            <div class="col">
+                <label for="guidance_scale">Guidance scale:</label>
+                <input type="range" id="guidance_scale" min="0" max="10" value="3.5" step="0.1">
+                <label for="num_inference_steps">Number of inference steps:</label>
+                <input type="number" id="num_inference_steps" min="1" max="100" value="50">
+                <label for="scheduler">Scheduler:</label>
+                <select id="scheduler">
+                    <option value="ddim">ddim</option>
+                    <option value="pndm">pndm</option>
+                    <option value="lms">lms</option>
+                    <option value="euler_a">euler_a</option>
+                    <option value="heun">heun</option>
+                </select>
+                <label for="seed">Seed:</label>
+                <input type="number" id="seed" min="1" max="9999" value="1111">
+            </div>
+        </div>
+        <button id="generateButton">Generate Image</button>
+        <div id="progress">Processing image... <span id="progressPercentage">0%</span></div>
+        <div id="imageContainer"></div>
+        <a id="downloadButton" style="display: none;">Download Image</a>
+        <p>If you encounter an error, please check your internet connection and ensure the model URL is correct.</p>
+    </div>
+
+    <script type="module">
+        const headers = {
+            "Authorization": "Bearer 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",
+            "Content-Type": "application/json"
+        };
+
+        async function query(payload, API_URL) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status code ${response.status}: ${await response.text()}`);
+                }
+
+                return await response.blob();
+            } catch (error) {
+                alert(`An error occurred during the API request: ${error.message}`);
+                return null;
+            }
+        }
+
+        document.getElementById('generateButton').addEventListener('click', async () => {
+            const description = document.getElementById('description').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const guidance_scale = parseFloat(document.getElementById('guidance_scale').value);
+            const num_inference_steps = parseInt(document.getElementById('num_inference_steps').value);
+            const scheduler = document.getElementById('scheduler').value;
+            const seed = parseInt(document.getElementById('seed').value);
+            const API_URL = document.getElementById('modelSelect').value; // Get the selected model URL
+
+            const payload = {
+                inputs: description,
+                parameters: {
+                    width: width,
+                    height: height,
+                    guidance_scale: guidance_scale,
+                    num_inference_steps: num_inference_steps,
+                    scheduler: scheduler,
+                    seed: seed
+                }
+            };
+
+            const progressDiv = document.getElementById('progress');
+            const progressPercentage = document.getElementById('progressPercentage');
+            const imageContainer = document.getElementById('imageContainer');
+            const downloadButton = document.getElementById('downloadButton');
+
+            progressDiv.style.display = 'block';
+            for (let i = 0; i <= 100; i++) {
+                await new Promise(resolve => setTimeout(resolve, 20));  // Simulate progress
+                progressPercentage.textContent = `${i}%`;
+            }
+
+            const imageBlob = await query(payload, API_URL);
+            progressDiv.style.display = 'none';
+
+            if (imageBlob) {
+                const imageUrl = URL.createObjectURL(imageBlob);
+                imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated Image" style="max-width: 100%;">`;
+                downloadButton.href = imageUrl;
+                downloadButton.download = 'generated_image.png';
+                downloadButton.textContent = 'Download Image';
+                downloadButton.style.display = 'block';
+            } else {
+                alert("Failed to generate image. Please check your inputs and try again.");
+            }
+        });
+    </script>
+</body>
+</html>
